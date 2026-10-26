@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cue Prompter</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF1F4;--panel:#FFF;--ink:#16222C;--mute:#566673;--line:#C9D3DB;--acc:#0E7C86;--accink:#FFF;box-sizing:border-box}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F181E;--panel:#17232C;--ink:#E7EEF3;--mute:#93A4B1;--line:#2A3A46;--acc:#4FC3CF;--accink:#0F181E;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0F181E;--panel:#17232C;--ink:#E7EEF3;--mute:#93A4B1;--line:#2A3A46;--acc:#4FC3CF;--accink:#0F181E;color-scheme:dark}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5}
+#ed{max-width:900px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 16px) 16px calc(env(safe-area-inset-bottom,0px) + 40px)}
+h1{font-size:clamp(1.6rem,4vw,2.2rem);font-weight:800;margin:6px 0 2px}
+h2{font-size:1.05rem;margin:0 0 10px}
+.sub,.note{color:var(--mute);margin:0 0 14px;font-size:.95rem}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{border:1px solid var(--line);background:var(--panel);padding:9px 14px;border-radius:10px;cursor:pointer;font-weight:600}
+button.main{background:var(--acc);color:var(--accink);border-color:var(--acc)}
+input[type=text],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+input[type=text]{flex:1 1 180px}textarea{width:100%;min-height:230px;line-height:1.5}
+input[type=range]{accent-color:var(--acc);flex:1 1 150px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px 22px}
+.f{display:flex;flex-direction:column;gap:2px}.f label{font-weight:600;display:flex;justify-content:space-between}
+.f output{color:var(--mute);font-weight:400}
+.chk{flex-direction:row;align-items:center;gap:8px}
+.keys{display:grid;grid-template-columns:1fr auto auto;gap:8px 10px;align-items:center}
+.kk{color:var(--mute);font-size:.9rem}
+code{background:var(--bg);padding:1px 6px;border-radius:6px}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+
+#pr{position:fixed;inset:0;z-index:10;overflow:hidden;background:var(--pbg,#000);color:var(--pfg,#fff);touch-action:none;user-select:none;-webkit-user-select:none}
+#view{position:absolute;inset:0;overflow:hidden}
+#view.fh{transform:scaleX(-1)}#view.fv{transform:scaleY(-1)}#view.fh.fv{transform:scale(-1,-1)}
+#band{position:absolute;left:0;right:0;background:rgba(127,127,127,.22);border-top:2px solid var(--pfg);border-bottom:2px solid var(--pfg);opacity:.9;pointer-events:none}
+#txt{position:absolute;left:0;right:0;top:0;will-change:transform;padding:var(--pt) var(--side) var(--pb);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-weight:700;font-size:var(--fs);line-height:var(--lh);text-align:var(--al)}
+#in{position:relative;white-space:pre-wrap;overflow-wrap:anywhere}
+.mk{display:inline}.mk::before{content:"[" attr(data-c) "]";font-size:.35em;font-weight:400;opacity:.7;border:1px solid currentColor;border-radius:6px;padding:0 .4em;margin:0 .4em;vertical-align:middle}
+.nocue .mk::before{display:none}
+#hud{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 6px) 12px 0;font:600 14px system-ui,sans-serif;display:flex;justify-content:space-between;gap:10px;pointer-events:none;color:var(--pfg);text-shadow:0 0 4px var(--pbg)}
+#prog{position:absolute;left:0;top:0;height:4px;background:var(--acc);width:0}
+#cd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 28vmin system-ui,sans-serif;color:var(--pfg);background:rgba(0,0,0,.45);pointer-events:none}
+#msg{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);background:rgba(20,20,20,.85);color:#fff;padding:8px 16px;border-radius:20px;font:600 15px system-ui,sans-serif;pointer-events:none}
+#bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px 10px calc(env(safe-area-inset-bottom,0px) + 10px);background:linear-gradient(transparent,rgba(0,0,0,.7));transition:opacity .3s}
+#bar.hide{opacity:0;pointer-events:none}
+#bar button{background:rgba(30,30,30,.85);color:#fff;border-color:#555;min-width:52px}
+#bar button.main{background:var(--acc);color:var(--accink)}
+#cam{display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:var(--camop,.45)}
+#cam.on{display:block}#cam.front{transform:scaleX(-1)}
+#pr.camon #txt{text-shadow:0 0 6px var(--pbg),0 0 16px var(--pbg)}
+#hRec{color:#ff5a5a;font-weight:800}
+#rv{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 12px);z-index:5;color:#fff;font-family:system-ui,sans-serif}
+#rv video{max-width:100%;max-height:68vh;border-radius:10px;background:#111}
+#rv .rvb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+#rv button{background:#222;color:#fff;border-color:#555}#rv button.main{background:var(--acc);color:var(--accink)}
+@media(prefers-reduced-motion:reduce){#bar{transition:none}}
+</style>
+</head>
+<body>
+<main id="ed">
+<h1>Cue Prompter</h1>
+<p class="sub">A teleprompter for your phone or tablet. Scrolling speeds up and slows down smoothly, follows cues you write in the script, and works with your Bluetooth remote.</p>
+
+<section class="box">
+<h2>Script</h2>
+<div class="row"><select id="sel" aria-label="Saved scripts"></select><input type="text" id="title" aria-label="Script title" placeholder="Script title"></div>
+<textarea id="src" aria-label="Script text" placeholder="Paste or type your script"></textarea>
+<div class="row" style="margin-top:10px">
+<button class="main" id="bStart">Start prompter</button>
+<button id="bNew">New</button><button id="bDel">Delete</button>
+<button id="bImp">Import .txt</button><input type="file" id="file" accept=".txt,.md,text/plain" hidden>
+<span class="kk" id="cnt"></span>
+</div>
+<p class="note">Cues change the scroll while you read. Put them anywhere in the script: <code>[slow]</code> <code>[fast]</code> <code>[normal]</code> <code>[speed 120]</code> <code>[pause 2]</code>. Slow is 25% slower, fast is 30% faster, and pause holds the text for that many seconds.</p>
+<div class="row"><select id="tpl" aria-label="AI script templates"></select><button id="bTpl">Add AI script</button></div>
+<p class="note">Every AI script follows the same short-video recipe. <code>[hook]</code> grabs attention in the first 3 seconds, <code>[body]</code> teaches one idea, <code>[cta]</code> asks for one action, and <code>[loop]</code> ends with half a sentence that flows straight into your first line, so the video replays smoothly. These four labels only mark sections. They don’t change the speed.</p>
+</section>
+
+<section class="box">
+<h2>Scrolling and display</h2>
+<div class="grid">
+<div class="f"><label for="i1">Speed <output data-o="wpm"></output></label><input type="range" id="i1" data-k="wpm" min="40" max="300" step="5"></div>
+<div class="f"><label for="i2">Speed change smoothness <output data-o="smooth"></output></label><input type="range" id="i2" data-k="smooth" min="1" max="10"></div>
+<div class="f"><label for="i3">Text size <output data-o="fs"></output></label><input type="range" id="i3" data-k="fs" min="24" max="140" step="2"></div>
+<div class="f"><label for="i4">Line spacing <output data-o="lh"></output></label><input type="range" id="i4" data-k="lh" min="1.1" max="2.2" step="0.05"></div>
+<div class="f"><label for="i5">Side margin <output data-o="side"></output></label><input type="range" id="i5" data-k="side" min="2" max="25"></div>
+<div class="f"><label for="i6">Reading line height <output data-o="line"></output></label><input type="range" id="i6" data-k="line" min="15" max="70"></div>
+<div class="f"><label for="i7">Colors</label><select id="i7" data-k="theme"><option value="classic">White on black</option><option value="amber">Yellow on black</option><option value="paper">Black on white</option><option value="night">Soft green</option><option value="blue">Pale blue</option></select></div>
+<div class="f"><label for="i8">Text alignment</label><select id="i8" data-k="align"><option value="center">Centered</option><option value="left">Left</option></select></div>
+<div class="f"><label for="i9">Countdown before start</label><select id="i9" data-k="cd"><option value="0">None</option><option value="3">3 seconds</option><option value="5">5 seconds</option></select></div>
+<div class="f chk"><input type="checkbox" id="c1" data-k="flipH"><label for="c1">Mirror left to right (for glass)</label></div>
+<div class="f chk"><input type="checkbox" id="c2" data-k="flipV"><label for="c2">Flip upside down</label></div>
+<div class="f chk"><input type="checkbox" id="c3" data-k="band"><label for="c3">Show reading line</label></div>
+<div class="f chk"><input type="checkbox" id="c4" data-k="cues"><label for="c4">Show cue tags in text</label></div>
+</div>
+</section>
+
+<section class="box">
+<h2>Camera and recording</h2>
+<div class="grid">
+<div class="f"><label for="cm">Camera</label><select id="cm" data-k="cam"><option value="off">Off</option><option value="front">Front camera</option><option value="back">Back camera</option></select></div>
+<div class="f"><label for="co">Camera brightness behind text <output data-o="camOp"></output></label><input type="range" id="co" data-k="camOp" min="0.1" max="1" step="0.05"></div>
+<div class="f chk"><input type="checkbox" id="ar" data-k="autoRec"><label for="ar">Start recording when scrolling starts</label></div>
+</div>
+<p class="note">With the camera on, you see yourself behind the text. The recording captures your camera and microphone, not the text. When you stop, you can watch the take and save it. If the camera is blocked, open the page in Chrome instead of inside another app.</p>
+</section>
+
+<section class="box">
+<h2>Bluetooth remote</h2>
+<p class="note">Pair your remote in Android’s Bluetooth settings first. Most remotes act like a keyboard. Press a button on it now to see what it sends, then assign it to an action.</p>
+<p><strong>Last button detected:</strong> <span id="last">none yet</span></p>
+<div class="keys" id="keys"></div>
+<div class="row" style="margin-top:12px"><button id="kReset">Reset to defaults</button></div>
+</section>
+
+<p class="note">On Android Chrome, open the browser menu and choose Add to Home screen to start it like an app. Your scripts and settings are saved on this device.</p>
+</main>
+
+<div id="pr" hidden>
+<video id="cam" playsinline muted></video>
+<div id="view"><div id="band"></div><div id="txt"><div id="in"></div></div></div>
+<div id="hud"><div id="prog"></div><span id="hSpd"></span><span id="hRec"></span><span id="hTime"></span></div>
+<div id="cd" hidden></div><div id="msg" hidden></div>
+<div id="bar">
+<button id="bBack">Back</button><button id="bSlow" aria-label="Slower">−</button>
+<button class="main" id="bPlay">Play</button>
+<button id="bFast" aria-label="Faster">+</button><button id="bFwd">Skip</button>
+<button id="bFm" aria-label="Smaller text">A−</button><button id="bFp" aria-label="Bigger text">A+</button>
+<button id="bMir">Mirror</button><button id="bRec" hidden>Rec</button><button id="bExit">Exit</button>
+</div>
+<div id="rv" hidden>
+<video id="rvv" controls playsinline></video>
+<p id="rvn" style="margin:0"></p>
+<div class="rvb"><button class="main" id="rvSave">Save video</button><button id="rvAgain">Record again</button><button id="rvClose">Close</button></div>
+</div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s);
+const ld=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const DEF={wpm:150,smooth:6,fs:56,lh:1.5,side:6,line:38,theme:'classic',align:'center',cd:3,cam:'off',camOp:0.45,autoRec:true,flipH:false,flipV:false,band:true,cues:true};
+const TH={classic:['#000','#fff'],amber:['#000','#FFD84D'],paper:['#fff','#111'],night:['#0b1a10','#a8f0b0'],blue:['#06121f','#cfe8ff']};
+const AC=[['playpause','Start or pause'],['faster','Faster'],['slower','Slower'],['back','Jump back'],['forward','Jump forward'],['restart','Restart'],['mirror','Mirror text'],['fontUp','Bigger text'],['fontDown','Smaller text'],['record','Record on or off'],['exit','Exit prompter']];
+const KDEF={playpause:['Space','Enter','MediaPlayPause','KeyK'],faster:['ArrowUp','PageUp','MediaTrackNext'],slower:['ArrowDown','PageDown','MediaTrackPrevious'],back:['ArrowLeft'],forward:['ArrowRight'],restart:['Home'],mirror:['KeyM'],fontUp:['Equal','NumpadAdd'],fontDown:['Minus','NumpadSubtract'],exit:['Escape'],record:['KeyR']};
+const SAMPLE='Hey, welcome back. [pause 1] Today I want to show you one thing that changes how your videos feel.\n\nMost people talk at one speed the whole time. It sounds flat, and viewers drift away.\n\n[slow] But watch what happens when you slow down on the idea that matters, [normal] and then speed up through the small details. [fast] Quick example, quick example, quick example.\n\n[normal] That contrast is what keeps people listening. [pause 2] Let it land.\n\n[speed 130] Now say it your way, at your own pace, and feel the difference.';
+let S=Object.assign({},DEF,ld('tp_s',{})),KM=ld('tp_k',null)||JSON.parse(JSON.stringify(KDEF)),scripts=ld('tp_sc',[]),cur=null,learn=null;
+if(!scripts.length)scripts=[{id:Date.now(),title:'Sample script',text:SAMPLE}];
+cur=scripts[0];
+AC.forEach(([a])=>{if(!KM[a])KM[a]=(KDEF[a]||[]).slice()});
+
+/* editor */
+const sel=$('#sel'),src=$('#src'),ttl=$('#title');
+function esc(s){return s}
+function list(){sel.textContent='';scripts.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=s.title||'Untitled';sel.append(o)});sel.value=cur.id;src.value=cur.text;ttl.value=cur.title;count()}
+function count(){const n=src.value.replace(/\[[^\]]*\]/g,' ').split(/\s+/).filter(Boolean).length,m=Math.round(n/S.wpm*60);$('#cnt').textContent=n+' words · about '+Math.floor(m/60)+':'+String(m%60).padStart(2,'0')+' at '+S.wpm+' wpm'}
+function save(){cur.text=src.value;cur.title=ttl.value.trim()||'Untitled';sv('tp_sc',scripts);const o=[...sel.options].find(o=>o.value==cur.id);if(o)o.textContent=cur.title}
+src.oninput=()=>{save();count()};ttl.oninput=save;
+sel.onchange=()=>{cur=scripts.find(s=>s.id==sel.value);list()};
+$('#bNew').onclick=()=>{save();cur={id:Date.now(),title:'Untitled',text:''};scripts.push(cur);sv('tp_sc',scripts);list();src.focus()};
+$('#bDel').onclick=()=>{scripts=scripts.filter(s=>s!==cur);if(!scripts.length)scripts=[{id:Date.now(),title:'Untitled',text:''}];cur=scripts[0];sv('tp_sc',scripts);list()};
+$('#bImp').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{cur={id:Date.now(),title:f.name.replace(/\.\w+$/,''),text:String(r.result)};scripts.push(cur);sv('tp_sc',scripts);list()};r.readAsText(f);e.target.value=''};
+
+function showVals(){document.querySelectorAll('[data-o]').forEach(o=>{const k=o.dataset.o,v=S[k];o.textContent=k==='wpm'?v+' wpm':k==='fs'?v+' px':k==='camOp'?Math.round(v*100)+'%':k==='side'?v+'%':k==='line'?v+'% down':v})}
+function setS(k,v){S[k]=v;sv('tp_s',S);const i=document.querySelector('[data-k="'+k+'"]');if(i){if(i.type==='checkbox')i.checked=v;else i.value=v}showVals();count()}
+document.querySelectorAll('[data-k]').forEach(i=>{const k=i.dataset.k;if(i.type==='checkbox')i.checked=S[k];else i.value=S[k];
+ i.oninput=()=>{const v=i.type==='checkbox'?i.checked:(i.type==='range'?+i.value:(k==='cd'?+i.value:i.value));setS(k,v);if(!pr.hidden)layout(true)}});
+showVals();
+
+/* remote key setup */
+const keyId=e=>e.code&&e.code!=='Unidentified'?e.code:(e.key&&e.key!=='Unidentified'?e.key:'keyCode '+e.keyCode);
+function keysUI(){const k=$('#keys');k.textContent='';AC.forEach(([a,l])=>{
+ const n=document.createElement('span');n.textContent=l;
+ const v=document.createElement('span');v.className='kk';v.textContent=(KM[a]||[]).join(', ')||'not assigned';
+ const b=document.createElement('button');b.textContent=learn===a?'Press a button…':'Assign';b.onclick=()=>{learn=learn===a?null:a;keysUI()};
+ const c=document.createElement('button');c.textContent='Clear';c.onclick=()=>{KM[a]=[];sv('tp_k',KM);keysUI()};
+ const w=document.createElement('div');w.append(n,document.createElement('br'),v);const x=document.createElement('div');x.append(b,' ',c);
+ k.append(w,x,document.createElement('span'))})}
+$('#kReset').onclick=()=>{KM=JSON.parse(JSON.stringify(KDEF));sv('tp_k',KM);learn=null;keysUI()};
+keysUI();
+
+/* prompter */
+const pr=$('#pr'),view=$('#view'),txt=$('#txt'),inn=$('#in'),band=$('#band'),bar=$('#bar');
+const RE=/\[\s*(speed\s*\d+|slow|fast|normal|pause\s*[\d.]+|hook|body|cta|loop)\s*\]/gi,LB=['hook','body','cta','loop'];
+let secLabel='',stream=null,rec=null,chunks=[],recT0=0,blobUrl='',lastBlob=null,pos=0,vel=0,playing=false,drag=false,cdOn=false,cdT=null,raf=0,last=0,lastHud=0,lastAct=0,contentH=1,pxw=1,nWords=1,markers=[],mi=0,sec={abs:null,mult:1},pauseUntil=0,wl=null,msgT=null;
+const au=new Audio();
+function silent(){const n=8000,b=new Uint8Array(44+n),d=new DataView(b.buffer),w=(o,s)=>[...s].forEach((c,i)=>b[o+i]=c.charCodeAt(0));
+ w(0,'RIFF');d.setUint32(4,36+n,true);w(8,'WAVEfmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,1,true);d.setUint32(24,8000,true);d.setUint32(28,8000,true);d.setUint16(32,1,true);d.setUint16(34,8,true);w(36,'data');d.setUint32(40,n,true);b.fill(128,44);
+ let s='';b.forEach(x=>s+=String.fromCharCode(x));return 'data:audio/wav;base64,'+btoa(s)}
+const eff=()=>Math.max(10,(sec.abs??S.wpm)*sec.mult);
+const lab=w=>w<120?'Slow and deliberate':w<145?'Calm explainer':w<170?'Natural talking':w<195?'Energetic':'Rapid fire';
+function toast(t,ms){const m=$('#msg');m.textContent=t;m.hidden=false;clearTimeout(msgT);msgT=setTimeout(()=>m.hidden=true,ms||1300)}
+
+function build(){inn.textContent='';nWords=0;
+ cur.text=src.value;
+ cur.text.split(RE).forEach((p,i)=>{
+  if(i%2){const s=document.createElement('span'),t=(p.match(/[a-z]+/i)||[''])[0].toLowerCase();s.className='mk';s.dataset.c=p.trim();s.dataset.t=t;s.dataset.v=parseFloat(p.replace(/[^\d.]/g,''))||0;inn.append(s)}
+  else{inn.append(document.createTextNode(p));nWords+=p.split(/\s+/).filter(Boolean).length}})}
+function layout(keep){
+ const r=keep&&contentH?pos/contentH:0,T=TH[S.theme]||TH.classic,vh=innerHeight,pt=vh*S.line/100;
+ pr.style.setProperty('--pbg',T[0]);pr.style.setProperty('--pfg',T[1]);pr.style.setProperty('--camop',S.camOp);
+ txt.style.setProperty('--fs',S.fs+'px');txt.style.setProperty('--lh',S.lh);txt.style.setProperty('--side',S.side+'vw');txt.style.setProperty('--al',S.align);
+ txt.style.setProperty('--pt',pt+'px');txt.style.setProperty('--pb',(vh-pt)+'px');
+ view.className=(S.flipH?'fh ':'')+(S.flipV?'fv ':'')+(S.cues?'':'nocue');
+ band.hidden=!S.band;band.style.top=pt+'px';band.style.height=(S.fs*S.lh)+'px';
+ requestAnimationFrame(()=>{contentH=Math.max(1,inn.offsetHeight);pxw=contentH/Math.max(1,nWords);
+  markers=[...inn.querySelectorAll('.mk')].map(e=>({top:e.offsetTop,type:e.dataset.t,v:+e.dataset.v}));
+  pos=keep?r*contentH:pos;syncSec()})}
+function applySec(m){if(m.type==='speed')sec={abs:m.v,mult:1};else if(m.type==='slow')sec={abs:null,mult:.75};else if(m.type==='fast')sec={abs:null,mult:1.3};else if(m.type==='normal')sec={abs:null,mult:1};else if(LB.includes(m.type))secLabel=m.type}
+function syncSec(){sec={abs:null,mult:1};secLabel='';mi=0;while(mi<markers.length&&markers[mi].top<=pos){applySec(markers[mi]);mi++}pauseUntil=0}
+function setPos(p){pos=Math.max(0,Math.min(contentH,p));syncSec()}
+
+function frame(t){raf=requestAnimationFrame(frame);const dt=Math.min(.1,(t-last)/1000||0);last=t;const now=performance.now();
+ while(mi<markers.length&&markers[mi].top<=pos){const m=markers[mi++];if(m.type==='pause')pauseUntil=now+m.v*1000;else applySec(m)}
+ const want=(playing&&now>=pauseUntil&&!drag)?eff()*pxw/60:0;
+ vel+=(want-vel)*(1-Math.exp(-dt*(11-S.smooth)));if(want===0&&vel<.05)vel=0;
+ pos=Math.max(0,Math.min(contentH,pos+vel*dt));
+ txt.style.transform='translate3d(0,'+(-pos).toFixed(2)+'px,0)';
+ if(playing&&pos>=contentH-1){playing=false;vel=0;toast('End of script');if(rec)stopRec()}
+ if(now-lastHud>200){lastHud=now;hud(now)}}
+function hud(now){
+ const e=eff(),left=Math.max(0,Math.round((contentH-pos)/(e*pxw/60)));
+ $('#prog').style.width=(pos/contentH*100)+'%';
+ $('#hSpd').textContent=now<pauseUntil?'Pause '+Math.ceil((pauseUntil-now)/1000)+'s':(secLabel?secLabel.toUpperCase()+' · ':'')+Math.round(e)+' wpm · '+lab(e);
+ $('#hTime').textContent=Math.floor(left/60)+':'+String(left%60).padStart(2,'0')+' left';
+ $('#bPlay').textContent=playing?'Pause':'Play';
+ bar.classList.toggle('hide',playing&&Date.now()-lastAct>3000);
+ $('#hRec').textContent=rec?'● REC '+fmt((Date.now()-recT0)/1000):'';$('#bRec').textContent=rec?'Stop rec':'Rec'}
+
+function toggle(){
+ if(cdOn){clearInterval(cdT);cdOn=false;$('#cd').hidden=true;return}
+ if(playing){playing=false;toast('Paused');return}
+ if(pos<5&&S.cd>0){cdOn=true;let n=S.cd;const c=$('#cd');c.hidden=false;c.textContent=n;
+  cdT=setInterval(()=>{n--;if(n<=0){clearInterval(cdT);cdOn=false;c.hidden=true;go()}else c.textContent=n},1000)}
+ else go()}
+function go(){playing=true;if(S.autoRec&&stream&&!rec&&$('#rv').hidden)startRec()}
+const ACT={playpause:toggle,
+ faster:()=>{setS('wpm',Math.min(300,S.wpm+5));toast(S.wpm+' wpm')},
+ slower:()=>{setS('wpm',Math.max(40,S.wpm-5));toast(S.wpm+' wpm')},
+ back:()=>setPos(pos-innerHeight*.35),forward:()=>setPos(pos+innerHeight*.35),restart:()=>{setPos(0);vel=0},
+ mirror:()=>{setS('flipH',!S.flipH);layout(true)},
+ fontUp:()=>{setS('fs',Math.min(140,S.fs+4));layout(true)},fontDown:()=>{setS('fs',Math.max(24,S.fs-4));layout(true)},exit:()=>exitPr(),record:()=>toggleRec()};
+
+async function wake(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function enter(){save();build();$('#ed').hidden=true;pr.hidden=false;pos=0;vel=0;playing=false;layout(false);lastAct=Date.now();
+ try{au.src=silent();au.loop=true;au.volume=.02;au.play().catch(()=>{})}catch(e){}
+ try{if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:cur.title,artist:'Cue Prompter'});
+  const h=(a,f)=>{try{navigator.mediaSession.setActionHandler(a,f)}catch(e){}};
+  h('play',()=>{if(!playing)toggle()});h('pause',()=>{if(playing)toggle()});h('nexttrack',ACT.faster);h('previoustrack',ACT.slower);h('seekforward',ACT.forward);h('seekbackward',ACT.back)}}catch(e){}
+ try{document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen().catch(()=>{})}catch(e){}
+ startCam();wake();cancelAnimationFrame(raf);last=performance.now();raf=requestAnimationFrame(frame)}
+function exitPr(){if(rec){stopRec();return}$('#rv').hidden=true;stopCam();playing=false;clearInterval(cdT);cdOn=false;$('#cd').hidden=true;cancelAnimationFrame(raf);pr.hidden=true;$('#ed').hidden=false;
+ try{au.pause();if(wl)wl.release();if(document.fullscreenElement)document.exitFullscreen()}catch(e){}}
+$('#bStart').onclick=enter;
+$('#bPlay').onclick=toggle;$('#bBack').onclick=ACT.back;$('#bFwd').onclick=ACT.forward;$('#bSlow').onclick=ACT.slower;$('#bFast').onclick=ACT.faster;
+$('#bFm').onclick=ACT.fontDown;$('#bFp').onclick=ACT.fontUp;$('#bMir').onclick=ACT.mirror;$('#bExit').onclick=exitPr;
+
+let pd=null;
+pr.addEventListener('pointerdown',e=>{lastAct=Date.now();if(e.target.closest('#bar,#rv'))return;pd={y:e.clientY,p:pos};drag=false});
+pr.addEventListener('pointermove',e=>{lastAct=Date.now();if(!pd)return;const dy=e.clientY-pd.y;if(Math.abs(dy)>8)drag=true;if(drag){setPos(pd.p-dy*(S.flipV?-1:1));vel=0}});
+pr.addEventListener('pointerup',()=>{if(!pd)return;if(!drag)toggle();pd=null;drag=false});
+pr.addEventListener('pointercancel',()=>{pd=null;drag=false});
+addEventListener('resize',()=>{if(!pr.hidden)layout(true)});
+document.addEventListener('visibilitychange',()=>{if(!pr.hidden&&!document.hidden)wake()});
+addEventListener('keydown',e=>{const id=keyId(e);
+ if(learn){e.preventDefault();AC.forEach(([a])=>{KM[a]=(KM[a]||[]).filter(x=>x!==id)});(KM[learn]=KM[learn]||[]).push(id);sv('tp_k',KM);learn=null;keysUI();$('#last').textContent=id;return}
+ if(!pr.hidden){lastAct=Date.now();if(!$('#rv').hidden&&!(KM.exit||[]).includes(id))return;const a=Object.keys(KM).find(k=>KM[k].includes(id));if(a){e.preventDefault();ACT[a]()}return}
+ if(!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||id.startsWith('Media'))$('#last').textContent=id});
+const TPL=[
+{t:'AI: Prompt like a pro',x:`[hook] Getting ten times better answers from AI? [pause 1] It takes one change.
+
+[body] Most people type a short question and hope for the best. [slow] Instead, tell the AI three things. [pause 0.5] Who it should be. [pause 0.5] What you need. [pause 0.5] And how you want the answer. [normal]
+
+For example, don’t say, explain cloud. [pause 0.5] Say, you are a senior cloud engineer, explain cloud to a beginner in five bullet points. [fast] Same tool, completely different result. [normal]
+
+[cta] Save this video, and try it on your next prompt. [pause 0.5] Follow for one AI tip every day.
+
+[loop] [slow] And that one change is the secret behind`},
+{t:'AI: Agent vs chatbot',x:`[hook] An AI agent isn’t a chatbot. [pause 1] Here’s the difference in thirty seconds.
+
+[body] A chatbot answers. [pause 0.5] An agent acts. [slow] Give it a goal, like, book me the cheapest flight to Delhi. [normal] It plans the steps, uses tools like search, a calendar or your email, checks its own work, and keeps going until the job is done. [fast] Think of a chatbot as a smart friend, and an agent as a smart assistant. [normal]
+
+[cta] Want me to show you how to build one? [pause 0.5] Comment agent, and I’ll make the next video.
+
+[loop] [slow] So when you hear the words AI agent, remember,`},
+{t:'AI: Why it makes things up (RAG)',x:`[hook] Why AI makes things up, [pause 0.5] and how to stop it.
+
+[body] AI models answer from what they learned in training, [slow] so when they don’t know, they guess. [normal] The fix has a name. RAG, short for retrieval augmented generation. [pause 0.5] Before answering, the system searches your own documents, [pause 0.5] hands the best pieces to the model, [pause 0.5] and tells it, answer only from this. [fast] Fewer guesses, more facts, and it can point to its sources. [normal]
+
+[cta] Follow if you want to build a RAG app, step by step.
+
+[loop] [slow] Now you know exactly why`},
+{t:'AI: Build this one project',x:`[hook] If you want a GenAI job, build this one project.
+
+[body] Not a chatbot demo. [pause 0.5] A tool that solves a real problem. [slow] Take a messy folder of PDFs, build a question answering app with retrieval, add a simple web page, and deploy it. [normal] Then write down three things: the problem, your design choices, and what you would improve. [fast] That story is what interviewers remember. [normal]
+
+[cta] Save this, and tell me in the comments what you will build.
+
+[loop] [slow] So stop collecting certificates, and`},
+{t:'AI: Someone using AI',x:`[hook] AI is not taking your job. [pause 1] Someone using AI is.
+
+[body] The people getting ahead are not experts in everything. [slow] They simply use AI for the boring parts: first drafts, research, summaries, debugging. [normal] That frees up hours for the work only humans can do. Judgment, taste, and talking to people. [fast] Start small, ten minutes a day on one real task. [normal]
+
+[cta] Follow for simple AI habits you can start today.
+
+[loop] [slow] So don’t fear it, just learn it, because`}
+];
+const tp=$('#tpl');TPL.forEach((o,i)=>{const e=document.createElement('option');e.value=i;e.textContent=o.t;tp.append(e)});
+$('#bTpl').onclick=()=>{save();const o=TPL[+tp.value];cur={id:Date.now(),title:o.t,text:o.x};scripts.push(cur);sv('tp_sc',scripts);list()};
+
+const fmt=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+async function startCam(){
+ stopCam();$('#bRec').hidden=true;
+ if(S.cam==='off')return;
+ try{
+  const po=innerHeight>innerWidth,w=po?1080:1920,h=po?1920:1080;
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:S.cam==='back'?'environment':'user',width:{ideal:w},height:{ideal:h}},audio:true});
+  const v=$('#cam');v.srcObject=stream;v.classList.add('on');v.classList.toggle('front',S.cam==='front');v.play().catch(()=>{});
+  pr.classList.add('camon');$('#bRec').hidden=false;toast('Camera ready')
+ }catch(e){stream=null;pr.classList.remove('camon');const n=e&&e.name;toast(!window.isSecureContext||!navigator.mediaDevices?'Camera needs a secure https link. A downloaded file cannot use it.':n==='NotAllowedError'?'Camera or microphone permission was denied. Allow it in Chrome site settings.':n==='NotFoundError'?'No camera or microphone found.':n==='NotReadableError'?'Camera is busy in another app. Close it and try again.':'Camera is blocked here. Open the page from your own https link in Chrome.',4500)}}
+function stopCam(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;const v=$('#cam');v.srcObject=null;v.classList.remove('on');pr.classList.remove('camon')}
+function pickMime(){const c=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'];return window.MediaRecorder?(c.find(m=>MediaRecorder.isTypeSupported(m))||''):''}
+function startRec(){
+ if(!stream||rec)return;
+ try{const m=pickMime();chunks=[];rec=new MediaRecorder(stream,m?{mimeType:m,videoBitsPerSecond:6000000}:{});
+  rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  rec.onstop=()=>{const r=rec;rec=null;lastBlob=new Blob(chunks,{type:(r&&r.mimeType)||'video/webm'});review()};
+  rec.start(1000);recT0=Date.now();toast('Recording')}catch(e){rec=null;toast('Recording is not supported here',2500)}}
+function stopRec(){if(rec&&rec.state!=='inactive')rec.stop()}
+function toggleRec(){if(!stream){toast('Turn the camera on in settings first',2200);return}rec?stopRec():startRec()}
+function review(){
+ if(blobUrl)URL.revokeObjectURL(blobUrl);blobUrl=URL.createObjectURL(lastBlob);
+ $('#rvv').src=blobUrl;$('#rv').hidden=false;playing=false;
+ $('#rvn').textContent=(lastBlob.size/1048576).toFixed(1)+' MB · '+fmt((Date.now()-recT0)/1000)}
+$('#bRec').onclick=toggleRec;
+$('#rvAgain').onclick=()=>{$('#rv').hidden=true;$('#rvv').pause();setPos(0);vel=0;playing=false};
+$('#rvClose').onclick=()=>{$('#rv').hidden=true;$('#rvv').pause()};
+$('#rvSave').onclick=async()=>{
+ const ext=/mp4/.test(lastBlob.type)?'mp4':'webm',name=((cur.title||'take').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-')||'take')+'-'+Date.now().toString(36)+'.'+ext;
+ let d=null;try{if(typeof claude!=='undefined')d=await claude.use('downloads')}catch(e){}
+ if(d){try{await d.save({filename:name,data:lastBlob});toast('Saved',1800)}catch(e){toast(e&&e.code==='declined'?'Not saved':'Could not save here',2200)}}
+ else{const a=document.createElement('a');a.href=blobUrl;a.download=name;document.body.append(a);a.click();a.remove()}};
+list();
+</script>
+</body>
+</html>
